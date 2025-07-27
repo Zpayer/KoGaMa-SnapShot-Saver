@@ -11,157 +11,111 @@
 // @grant        none
 // ==/UserScript==
 
-
-let snapshot = top.snapshot = [];
-function func01 (p0,p1) {
-let i = 0, r;
-Object.values(p1).forEach(num=>{
-if (num == p0 && [...p1][i+1] == 120 ){
-    let length = new Uint32Array(p1.slice(i+2,i+6).reverse().buffer)[0]
-    r = p1.slice(i+6,i+6+length)
+function addModuleScript(scriptContent, f) {
+    window.FXHUJCX = f;
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.textContent = scriptContent + `;window.FXHUJCX();window.FXHUJCX=null;`;
+    document.body.appendChild(script);
 }
-i++
-})
-return r
-};
 
-WebSocket = new Proxy(WebSocket, {
-    construct(target, args) {
-        const ws = new target(...args);
+function LoadScript() {
+    const {
+        Protocol16,
+        StreamBuffer,
+        EgMessageType
+    } = window.Protocol16Imports;
 
-        let userOnMessage = null;
-        Object.defineProperty(ws, 'onmessage', {
-          get() {
-            return userOnMessage;
-          },
-          set(p0) {
-            userOnMessage = function(e) {
-              let var01 = new Uint8Array(e.data);
-              if (var01[2] == 62&&var01[1] == 4) (id("menu").style.display="flex",snapshot.push(...func01(245,var01)));
-              p0.call(ws, e);
-            };
-            ws.addEventListener('message', userOnMessage);
-          }
-        });
-        return ws;
-    }
-});
-
-
-//   UI
-const div = (...a) => `<div ${a[0]?"id="+a[0]:""} ${a[1]?"class="+a[1]:""}>${a[2]?a[2]:""}</div>`
-const id = (a) => document.getElementById(a);
-document.body.innerHTML += `
-<style>
-    #menu {
-        color: white;
-        height: 100px;
-        width: 126px;
-        background: #000000a1;
-        position: absolute;
-        top: 20%;
-        left: 10px;
-        z-index: 999;
-        border-radius: 5px;
-        backdrop-filter: blur(10px);
-        user-select: none;
-        display: none;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: center;
+    function GetKeyFromValue(object, value) {
+        return Object.entries(object).filter(([_, __]) => __ == value)[0][0]
     }
 
-    #menu #title {
-        font-family: sans-serif;
-        font-weight: bolder;
-        font-size: 10px;
+
+    var GameSnapShotDataBuffer = [];
+
+
+    let Deserialize = (data) => {
+        try {
+            let Protocol = new Protocol16(),
+                SB = new StreamBuffer(data),
+                Data = {};
+            Data.MagicNumber = SB.ReadByte();
+            Data.EgMessageType = GetKeyFromValue(EgMessageType, SB.ReadByte());
+            if ([2, 6].includes(data[1])) Data.Data = Protocol.DeserializeOperationRequest(SB);
+            else if ([3, 7].includes(data[1])) Data.Data = Protocol.DeserializeOperationResponse(SB);
+            else if (data[1] == 4) Data.Data = Protocol.DeserializeEventData(SB);
+            else Data.Data = data;
+            return Data;
+        } catch (e) {
+            console.error(e);
+            debugger
+        }
     }
 
-    #menu #button {
-        transition: 1s ease;
-        cursor: pointer;
-        height: 30%;
-        border: 1px solid #ffffff59;
-        padding: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 9px;
-        margin: 10px;
-    }
+    WebSocket = new Proxy(WebSocket, {
+        construct(target, args) {
+            const ws = new target(...args);
 
-    #menu #button:hover {
-        transform: scale(0.9);
-        border: 1px solid #ffffff8a;
-    }
-    #menu #loader {
+            let userOnMessage = null;
+            Object.defineProperty(ws, 'onmessage', {
+                get() {
+                    return userOnMessage;
+                },
+                set(p0) {
+                    userOnMessage = function(e) {
+                        let var01 = new Uint8Array(e.data);
+                        if (var01[2] == 62 && var01[1] == 4) {
+                            let {
+                                Data
+                            } = Deserialize(var01);
+                            GameSnapShotDataBuffer.push(...Data.Parameters[245].Value)
+                            if (Data.Parameters[100]) Button.style.display = "block"
+                        }
+                        p0.call(ws, e);
+                    };
+                    ws.addEventListener('message', userOnMessage);
+                }
+            });
+            return ws;
+        }
+    });
+    const $ = (...e) => document.querySelector(...e);
+    let UnityCanvasContainer = $("#unity-canvas-container");
+
+    let Button = document.createElement("div");
+    Button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M17 17H17.01M17.4 14H18C18.9319 14 19.3978 14 19.7654 14.1522C20.2554 14.3552 20.6448 14.7446 20.8478 15.2346C21 15.6022 21 16.0681 21 17C21 17.9319 21 18.3978 20.8478 18.7654C20.6448 19.2554 20.2554 19.6448 19.7654 19.8478C19.3978 20 18.9319 20 18 20H6C5.06812 20 4.60218 20 4.23463 19.8478C3.74458 19.6448 3.35523 19.2554 3.15224 18.7654C3 18.3978 3 17.9319 3 17C3 16.0681 3 15.6022 3.15224 15.2346C3.35523 14.7446 3.74458 14.3552 4.23463 14.1522C4.60218 14 5.06812 14 6 14H6.6M12 15V4M12 15L9 12M12 15L15 12" stroke="#d9dad9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>`
+    Button.style = `
+    --h: 33px;
+    height: var(--h);
+    width: var(--h);
+    bottom: 2px;
     position: absolute;
-    height: 100%;
-    width: 100%;
+    z-index: 999;
+    left: 32.8%;
+    background: rgb(48, 72, 99);
     display: none;
-    justify-content: center;
-    align-items: center;
-    background: #000000ba;
+    `
+    Button.onclick = () => {
+    const url = URL.createObjectURL(new Blob([new Uint8Array(GameSnapShotDataBuffer).buffer]));
+    const l = document.createElement('a');
+    l.href = url;
+    l.download = (top.document.getElementsByClassName("game-title tool-tip")[0].textContent || "snapshot") + ".kgm";
+    l.click();
+    URL.revokeObjectURL(url);
     }
-    #menu #loader #loading {
-        width: 48px;
-        height: 48px;
-        display: inline-block;
-        position: relative;
-    }
-
-    #menu #loader #loading::after,
-    #menu #loader #loading::before {
-        content: '';
-        box-sizing: border-box;
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        border: 2px solid #FFF;
-        position: absolute;
-        left: 0;
-        top: 0;
-        animation: animloader 2s linear infinite;
-    }
-
-    #menu #loader #loading::after {
-        animation-delay: 1s;
-    }
-
-    @keyframes animloader {
-        0% {
-            transform: scale(0);
-            opacity: 1;
-        }
-
-        100% {
-            transform: scale(1);
-            opacity: 0;
-        }
-    }
-</style>
-${
-div("menu",0,
-    div("button",0,"Export") +
-    div("title",0,atob("TWFkZSBieSBacGF5ZXI=")) +
-    div("loader",0,
-        div("loading")
-       )
-   )
-}`
-    let _ = [id("button"), id("loader")]
-    _[0].onclick = a => {
-        _[1].style.display = "flex";
-        setTimeout(l=>_[1].style.display = "none",1e3)
-        const url = URL.createObjectURL(new Blob([new Uint8Array(snapshot).buffer]));
-        const l = document.createElement('a');
-        l.href = url;
-        l.download = (top.document.getElementsByClassName("game-title tool-tip")[0].textContent || "snapshot") + ".kgm";
-        l.click();
-        URL.revokeObjectURL(url);
-    }
+    UnityCanvasContainer.appendChild(Button);
 
 
-top.document.onkeydown = document.onkeydown = _ => _.key=="."?id("menu").style.display=id("menu").style.display=="flex"?"none":"flex":0
+
+}
 
 
+
+
+addModuleScript(`
+import Protocol16 from 'https://cdn.jsdelivr.net/gh/RandomUser15456/WebUnityProtocols/Protocol16.js';
+import StreamBuffer from 'https://cdn.jsdelivr.net/gh/RandomUser15456/WebUnityProtocols/StreamBuffer.js';
+import EgMessageType from 'https://cdn.jsdelivr.net/gh/RandomUser15456/WebUnityProtocols/EgMessageType.js';
+
+window.Protocol16Imports = {Protocol16,StreamBuffer,EgMessageType}
+`, () => LoadScript())
