@@ -1,16 +1,29 @@
 // ==UserScript==
 // @name         KoGaMa Game SnapShot Saver
 // @namespace    http://tampermonkey.net/
-// @version      2025-06-11
-// @description  try to take over the world!
+// @version      0.2
+// @description  Game SnapShot Saver.
 // @author       Zpayer.
 // @match		 https://www.kogama.com/page/webgl-frame/*
 // @match		 https://kogama.com.br/page/webgl-frame/*
 // @match		 https://friends.kogama.com/page/webgl-frame/*
+// @match        https://www.kogama.com/games/play/*
+// @match        https://www.kogama.com/build/*
+// @match        https://kogama.com.br/games/play/*
+// @match        https://kogama.com.br/build/*
+// @match        https://friends.kogama.com/games/play/*
+// @match        https://friends.kogama.com/build/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=kogama.com
 // @grant        none
 // ==/UserScript==
 
+if (location.pathname.includes("build")||location.pathname.includes("play")) {
+const log = console.log;
+console.log = function (...args){
+if (args[0] === "setupOptions") window.PageData = args[1];
+log(...args);
+}
+} else {
 function addModuleScript(scriptContent, f) {
     window.FXHUJCX = f;
     const script = document.createElement('script');
@@ -99,7 +112,7 @@ function LoadScript() {
     const url = URL.createObjectURL(new Blob([new Uint8Array(GameSnapShotDataBuffer).buffer]));
     const l = document.createElement('a');
     l.href = url;
-    l.download = (top.document.getElementsByClassName("game-title tool-tip")[0].textContent || "snapshot") + ".kgm";
+    l.download = (top?.PageData?.bootstrap?.object?.name || "snapshot") + ".kgm";
     l.click();
     URL.revokeObjectURL(url);
     }
@@ -119,3 +132,5 @@ import EgMessageType from 'https://cdn.jsdelivr.net/gh/RandomUser15456/WebUnityP
 
 window.Protocol16Imports = {Protocol16,StreamBuffer,EgMessageType}
 `, () => LoadScript())
+}
+
