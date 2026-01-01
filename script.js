@@ -109,7 +109,7 @@ function LoadScript() {
         const url = URL.createObjectURL(blob);
         const l = document.createElement('a');
         l.href = url;
-        l.download = (window.top?.PageData?.bootstrap?.object?.name || "snapshot") + ".kgm";
+        l.download = "snapshot.kgm";
         l.click();
         URL.revokeObjectURL(url);
     };
